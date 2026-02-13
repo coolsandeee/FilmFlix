@@ -9,6 +9,8 @@ import com.entertainment.filmflix.exception.NoDataException;
 import com.entertainment.filmflix.repository.movie.MovieRepository;
 import com.entertainment.filmflix.repository.user.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,8 +22,8 @@ import static com.entertainment.filmflix.constants.ApplicationConstants.MOVIES_D
 import static com.entertainment.filmflix.constants.ApplicationConstants.USER_SUCCESSFULLY_SUBSCRIBED;
 
 @Service
-@Slf4j
 public class SubscriptionService {
+    private Logger log = LoggerFactory.getLogger(SubscriptionService.class);
 
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;

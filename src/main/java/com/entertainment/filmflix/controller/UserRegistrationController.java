@@ -96,4 +96,23 @@ public class UserRegistrationController {
         }
     }
 
+    @DeleteMapping(value = "/{registeredEmailId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Response<String>> deleteUser(@PathVariable String registeredEmailId){
+        UserRequestDTO userRequestDTO = new UserRequestDTO();
+        userRequestDTO.setEmail(registeredEmailId);
+
+        String message = userService.deleteUser(userRequestDTO);
+
+        Response response = new GenericResponse();
+        response.setMessage(message);
+
+        if (FAILED_TO_DELETE_USER_WITH_EMAIL_ID.equals(message)) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(response);
+        }
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(response);
+    }
+
+
 }

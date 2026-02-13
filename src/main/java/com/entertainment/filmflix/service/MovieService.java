@@ -6,7 +6,10 @@ import com.entertainment.filmflix.dto.response.MovieResponseDTO;
 import com.entertainment.filmflix.entity.MovieEntity;
 import com.entertainment.filmflix.exception.NoDataException;
 import com.entertainment.filmflix.repository.movie.MovieRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,9 +21,9 @@ import java.util.stream.Collectors;
 import static com.entertainment.filmflix.constants.ApplicationConstants.NO_MOVIES_EXIST;
 
 @Service
-@Slf4j
 public class MovieService {
     private final MovieRepository movieRepository;
+    private Logger log = LoggerFactory.getLogger(MovieService.class);
 
     public MovieService(MovieRepository movieRepository) {
         this.movieRepository = movieRepository;
@@ -58,14 +61,24 @@ public class MovieService {
             tempList = new ArrayList<>(newMovieNamesToAdd);
             tempList.removeAll(existingMovieNames);
 
-            List<String> finalNewMovieNamesToAddAfterRemovingExistingMovies = newMovieNamesToAdd;
-            finalList = movieRequestDTOs.get().stream().filter(dto -> dto.getName().equals(finalNewMovieNamesToAddAfterRemovingExistingMovies.stream().findAny().get())).toList();
+            List<String> finalNewMovieNamesToAddAfterRemovingExistingMovies = tempList;
+            for (MovieRequestDTO dto : movieRequestDTOs.get()){
+                if (finalNewMovieNamesToAddAfterRemovingExistingMovies.contains(dto.getName())){
+                    finalList.add(dto);
+                }
+            }
+
+//            finalList = movieRequestDTOs.get()
+//                    .stream()
+//                    .filter(dto -> dto.getName().equals(finalNewMovieNamesToAddAfterRemovingExistingMovies.stream().f().get()))
+//                    .toList();
             log.debug("Following movies already exist in the FilmFlix library and will not be added again: {}", finalList.stream().map(movie->movie.getName()).toList());
         }
 
         log.debug("Total number of movies to add to the FilmFlix library are {}", finalList.size());
 
-        List<MovieEntity> movieEntitiesAdded = movieRepository.saveAll(finalList.stream().map(movieRequestDTO -> {
+        List<MovieEntity> movieEntitiesToSave = new ArrayList<>();
+        finalList.stream().forEach(movieRequestDTO -> {
             MovieEntity movieEntity = new MovieEntity();
             movieEntity.setName(movieRequestDTO.getName());
             movieEntity.setDescription(movieRequestDTO.getDescription());
@@ -75,19 +88,21 @@ public class MovieService {
             movieEntity.setReleaseYear(movieRequestDTO.getReleaseYear());
             movieEntity.setDurationMinutes(movieRequestDTO.getDurationMinutes());
             movieEntity.setRating(movieRequestDTO.getRating());
-            return movieEntity;
-        }).toList());
+            movieEntitiesToSave.add(movieEntity);
+        });
 
-        String message = "Total number of movies successfully added to the FilmFlix library are " + movieEntitiesAdded.size();
+        movieRepository.saveAll(movieEntitiesToSave);
+
+        String message = "Total number of movies successfully added to the FilmFlix library are " + finalList.size();
         log.debug(message);
         response.setMessage(message);
-        response.setResponse(tempList);
+        response.setResponse(finalList.stream().map(movie->movie.getName()).toList());
         return response;
     }
 
-    public final MovieResponseDTO getMovie(MovieRequestDTO movieRequestDTO){
-        Optional<MovieEntity> movieEntityOptional = isMovieExists(movieRequestDTO);
-        if (!movieEntityOptional.isPresent()) {
+    public MovieResponseDTO getMovie(MovieRequestDTO movieRequestDTO){
+        Optional<MovieEntity> movieEntityOptional = getMovieDetails(movieRequestDTO);
+        if (movieEntityOptional.isEmpty()) {
             String message = "Movie with name " + movieRequestDTO.getName() + " does not exist.";
             log.error(message);
             throw new NoDataException(message);
@@ -109,7 +124,7 @@ public class MovieService {
         return movieResponseDTO;
     }
 
-    public final List<MovieResponseDTO> getMovies(){
+    public List<MovieResponseDTO> getMovies(){
         List<MovieEntity> movieEntities = movieRepository.findAll();
         List<MovieResponseDTO> allMovies = new ArrayList<>();
 
@@ -135,8 +150,29 @@ public class MovieService {
         return allMovies;
     }
 
-    private Optional<MovieEntity> isMovieExists(MovieRequestDTO movieRequestDTO) {
+    private Optional<MovieEntity> getMovieDetails(MovieRequestDTO movieRequestDTO) {
         return movieRepository.findByName(movieRequestDTO.getName());
+    }
+
+    @Transactional
+    public int deleteMoviesFromFilmFlix(Optional<Set<MovieRequestDTO>> movieRequestDTOs){
+        if (movieRequestDTOs.isEmpty()) {
+            String message = "Input has no movie to delete from the library. Please mention at least one movie.";
+            log.error(message);
+            throw new NoDataException(message);
+        }
+
+        Set<MovieRequestDTO> moviesToDelete = movieRequestDTOs.get();
+        log.debug("Total number of movies to delete from the FilmFlix library are {}", moviesToDelete.size());
+
+        Set<String> movieNamesToDelete = moviesToDelete
+                .stream()
+                .map(dto -> dto.getName())
+                .collect(Collectors.toSet());
+
+        int totalNumberOfMoviesDeleted = movieRepository.deleteByNameIn(movieNamesToDelete);
+        log.debug("Total number of movies deleted from the FilmFlix library are {}", totalNumberOfMoviesDeleted);
+        return totalNumberOfMoviesDeleted;
     }
 
 }

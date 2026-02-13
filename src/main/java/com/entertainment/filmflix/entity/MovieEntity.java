@@ -13,11 +13,11 @@ import java.util.Set;
 @NoArgsConstructor
 @Entity
 @Table(name = "tb_movie")
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+//@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class MovieEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
+//    @EqualsAndHashCode.Include
     private Long id;
 
     @NotBlank

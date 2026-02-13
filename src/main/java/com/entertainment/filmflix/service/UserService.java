@@ -9,6 +9,8 @@ import com.entertainment.filmflix.exception.FilmFlixException;
 import com.entertainment.filmflix.exception.NoDataException;
 import com.entertainment.filmflix.repository.user.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,10 +21,10 @@ import java.util.*;
 import static com.entertainment.filmflix.constants.ApplicationConstants.*;
 
 @Service
-@Slf4j
 public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     public UserService(UserRepository userRepository) {
@@ -30,7 +32,7 @@ public class UserService {
     }
 
     public String addUser(UserRequestDTO userRequestDTO){
-        if (isUserExists(userRequestDTO).isPresent()) {
+        if (getUserDetails(userRequestDTO).isPresent()) {
             String message = "User with email ID " + userRequestDTO.getEmail() + " already exists.";
             log.error(message);
             throw new FilmFlixException(message);
@@ -53,8 +55,8 @@ public class UserService {
         return message;
     }
 
-    public final UserResponseDTO getUser(UserRequestDTO userRequestDTO){
-        Optional<UserEntity> userEntityOptional = isUserExists(userRequestDTO);
+    public UserResponseDTO getUser(UserRequestDTO userRequestDTO){
+        Optional<UserEntity> userEntityOptional = getUserDetails(userRequestDTO);
         if (!userEntityOptional.isPresent()) {
             String message = "User with email ID " + userRequestDTO.getEmail() + " does not exists.";
             log.error(message);
@@ -87,7 +89,7 @@ public class UserService {
         return userResponseDTO;
     }
 
-    public final List<UserResponseDTO> getUsers(){
+    public List<UserResponseDTO> getUsers(){
         List<UserEntity> userEntities = userRepository.findAll();
         List<UserEntity> tmpUserEntities = new ArrayList<>(userEntities);
         List<UserResponseDTO> allUsers = new ArrayList<>();
@@ -129,7 +131,27 @@ public class UserService {
         return allUsers;
     }
 
-    private Optional<UserEntity> isUserExists(UserRequestDTO userRequestDTO) {
+    @Transactional
+    public String deleteUser(UserRequestDTO userRequestDTO){
+        Optional<UserEntity> userEntityOptional = getUserDetails(userRequestDTO);
+        if (!userEntityOptional.isPresent()) {
+            String message = "User with email ID " + userRequestDTO.getEmail() + " does not exists.";
+            log.error(message);
+            throw new FilmFlixException(message);
+        }
+
+        UserEntity userEntity = userEntityOptional.get();
+        userEntity.getSubscribedMovieEntities().clear();
+
+        userRepository.delete(userEntity);
+
+        String message = "User with email ID " + userRequestDTO.getEmail() + " deleted successfully.";
+        log.debug(message);
+        return message;
+    }
+
+
+    private Optional<UserEntity> getUserDetails(UserRequestDTO userRequestDTO) {
         return userRepository.findByEmail(userRequestDTO.getEmail());
     }
 }

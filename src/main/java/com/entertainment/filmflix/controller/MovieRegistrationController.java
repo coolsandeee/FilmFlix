@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.entertainment.filmflix.constants.ApplicationConstants.FAILED_TO_ADD_MOVIES;
 import static com.entertainment.filmflix.constants.ApplicationConstants.FAILED_TO_CREATE_USER_WITH_EMAIL_ID;
@@ -72,6 +73,17 @@ public class MovieRegistrationController {
         GenericResponse response = new GenericResponse();
         response.setMessage("Movie details retrieved.");
         response.setResponse(allMovies);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(response);
+    }
+
+    @DeleteMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Response<String>> deleteMovies(@RequestBody Set<MovieRequestDTO> moviesToDelete){
+        int deletedMoviesCount = movieService.deleteMoviesFromFilmFlix(Optional.of(moviesToDelete));
+
+        Response response = new GenericResponse();
+        response.setMessage("Total number of movies deleted: " + deletedMoviesCount);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(response);
